@@ -1,11 +1,14 @@
 #include <curses.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* defines */
 #define EDITOR "tedit"
 #define VERSION "v0.1"
 
 #define KEY_ESCAPE 27
+#define KEY_EXIT_EDITOR "^X"
+#define CTRL_KEY(k) ((k) & 0x1f)
 
 
 /* Draw the header and move the cursor to (1,0) */
@@ -25,6 +28,7 @@ int main(int argc, char *argv[])
     initscr();
     noecho();
     keypad(stdscr, TRUE);
+
     if(argv[1])
         filename = argv[1];
     else
@@ -32,17 +36,14 @@ int main(int argc, char *argv[])
 
     draw_header(filename);
 
-
-    /* Need to move the cursor with arrow keys */
-
     int key;
     int position_x = 0;
     int position_y= 1;
-
     while(1)
     {
         move(position_y, position_x);
         key = getch();
+        const char *key_name = keyname(key);
         switch(key)
         {
             case KEY_UP:
@@ -61,8 +62,14 @@ int main(int argc, char *argv[])
                 if(position_x < COLS - 1)
                     position_x++;
                 break;
+
         }
+        if(strcmp(key_name, KEY_EXIT_EDITOR) == 0)
+        {
+            endwin();
+            exit(0);
+        }
+        
     }
-    endwin();
     return 0;
 }
