@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     if(argv[1])
         filename = argv[1];
     else
-        filename = "New Buffer";
+        filename = "<<new file>>";
 
     draw_header(filename);
     init_editor();
