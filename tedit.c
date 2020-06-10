@@ -81,7 +81,7 @@ void process_editor_commands(const char *key_name)
 void init_editor()
 {
     int key;
-    int position_x = 0;
+    int position_x = 3;
     int position_y= 1;
 
     while(1)
@@ -117,6 +117,31 @@ void read_file(char *filename)
     printw("%s", file_content);
 }
 
+void draw_line_numbers()
+{
+    for(int i = 1; i < LINES; i++)
+    {
+        move(i,0);
+        attron(COLOR_PAIR(1));
+        printw("%d", i);
+        attroff(COLOR_PAIR(1));
+    }
+}
+
+void init_colors()
+{
+    if(has_colors())
+    {
+        start_color();
+        init_pair(1, COLOR_GREEN, COLOR_BLACK);
+    }
+    else
+    {
+        endwin();
+        printf("Your terminal does not support colors!");
+        exit(1);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -125,6 +150,7 @@ int main(int argc, char *argv[])
     initscr();
     noecho();
     keypad(stdscr, TRUE);
+    init_colors();
 
     if(argv[1])
         filename = argv[1];
@@ -133,7 +159,8 @@ int main(int argc, char *argv[])
 
 
     draw_header(filename);
-    read_file(filename);
+    /* read_file(filename); */
+    draw_line_numbers();
     init_editor();
     return 0;
 }
