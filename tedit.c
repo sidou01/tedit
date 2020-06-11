@@ -5,6 +5,7 @@
 /* defines */
 #define EDITOR "tedit"
 #define VERSION "v0.1"
+#define MAX_LINE_LENGTH 1000
 
 /* editor commands */
 #define KEY_ESCAPE 27
@@ -17,10 +18,8 @@ struct editor_state {
     int term_width;
     FILE *file_open;
 };
-   
 */
 
-/* Draw the header and move the cursor to (1,0) */
 void draw_header(const char *filename)
 {
     attron(COLOR_PAIR(2));
@@ -58,6 +57,7 @@ void process_keys(int *position_y, int *position_x, int key)
 
 void process_editor_commands(const char *key_name)
 {
+    /* vim commands */
     if(strcmp(key_name,":") == 0)
     {
         const char *next_key = keyname(getch());
@@ -68,26 +68,20 @@ void process_editor_commands(const char *key_name)
                 exit(1);
                 break;
             case 'w':
-                /* save the file and update status bar*/
+                /* Get the FILE* as param or just use the global struct (state) and save changes */
                 break;
 
         }
-        if(strcmp(next_key, "q") == 0)
-        {
-        }
-        /* handle file save with :w */
-
     }
-    /* printw("HELLO: %s", key_name); */
+    /* or can exit with ^X */
     if(strcmp(key_name, KEY_EXIT_EDITOR) == 0)
     {
         endwin();
         exit(0);
     }
-
 }
 
-void init_editor()
+void edit()
 {
     int key;
     int position_x = 4;
@@ -107,6 +101,7 @@ void read_file(char *filename)
 {
     FILE *file;
     char *file_content;
+    char line[MAX_LINE_LENGTH];
     int file_size;
 
     if((file = fopen(filename, "r")) == NULL)
@@ -116,14 +111,26 @@ void read_file(char *filename)
         exit(1);
     }
 
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    /*
+        fseek(file, 0, SEEK_END);
+        file_size = ftell(file);
+        fseek(file, 0, SEEK_SET);
 
-    file_content = malloc(sizeof *file_content * file_size);
-    if(file_content == NULL) { printf("Error allocating memory to a file\n"); exit(1); }
-    fread(file_content, sizeof(char), file_size, file);
-    printw("%s", file_content);
+        file_content = malloc(sizeof *file_content * file_size);
+        if(file_content == NULL) { printf("Error allocating memory to a file\n"); exit(1); }
+        fread(file_content, sizeof(char), file_size, file);
+        printw("%s", file_content);
+        free(file_content);
+    */
+    int y = 1;
+    while(fgets(line, MAX_LINE_LENGTH, file) != NULL && y < LINES)
+    {
+        mvprintw(y++, 4, "%s", line);
+    }
+    /*
+       Need to save lines printed in some sort of global struct (state)
+       Print the rest of the lines as you scroll
+    */
 }
 
 void draw_line_numbers()
@@ -153,6 +160,7 @@ void init_colors()
     }
 }
 
+/* Need a global state */
 int main(int argc, char *argv[])
 {
     char *filename;
@@ -168,9 +176,11 @@ int main(int argc, char *argv[])
         filename = "file";
 
 
+    /* editor inits */
     draw_header(filename);
-    /* read_file(filename); */
+    read_file(filename);
     draw_line_numbers();
-    init_editor();
+
+    edit();
     return 0;
 }
