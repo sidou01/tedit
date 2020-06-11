@@ -10,15 +10,24 @@
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
 
+/*
+struct editor_state {
+    int current_line;
+    int term_height;
+    int term_width;
+    FILE *file_open;
+};
+   
+*/
 
 /* Draw the header and move the cursor to (1,0) */
 void draw_header(const char *filename)
 {
-    attron(A_STANDOUT);
+    attron(COLOR_PAIR(2));
     int name_len = COLS/2 - (strlen(EDITOR) + strlen(VERSION) + 1);
     printw("%s %s %*s", EDITOR, VERSION, name_len, filename);
     printw("%*s", COLS/2, "");
-    attroff(A_STANDOUT);
+    attroff(COLOR_PAIR(1));
 }
 
 /* interpret arrow/command keys and print the rest */
@@ -81,7 +90,7 @@ void process_editor_commands(const char *key_name)
 void init_editor()
 {
     int key;
-    int position_x = 3;
+    int position_x = 4;
     int position_y= 1;
 
     while(1)
@@ -134,6 +143,7 @@ void init_colors()
     {
         start_color();
         init_pair(1, COLOR_GREEN, COLOR_BLACK);
+        init_pair(2, COLOR_BLACK, COLOR_GREEN);
     }
     else
     {
