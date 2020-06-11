@@ -104,11 +104,14 @@ void read_file(char *filename)
     char line[MAX_LINE_LENGTH];
     int file_size;
 
-    if((file = fopen(filename, "r")) == NULL)
+    if((file = fopen(filename, "r+")) == NULL)
     { 
-        endwin();
-        printf("Error opening the file \"%s\"\n", filename);
-        exit(1);
+        if((file = fopen(filename, "w+")) == NULL)
+        {
+            endwin();
+            printf("Error opening the file \"%s\"\n", filename);
+            exit(1);
+        }
     }
 
     /*
@@ -173,7 +176,7 @@ int main(int argc, char *argv[])
     if(argv[1])
         filename = argv[1];
     else
-        filename = "file";
+        filename = "<<new file>>";
 
 
     /* editor inits */
