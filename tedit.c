@@ -11,14 +11,12 @@
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
 
-/*
-struct editor_state {
-    int current_line;
-    int term_height;
-    int term_width;
-    FILE *file_open;
+struct file_t {
+    FILE* file;
+    char current_line[MAX_LINE_LENGTH];
+    int cursor_x;
+    int cursor_y;
 };
-*/
 
 void draw_header(const char *filename)
 {
@@ -50,7 +48,12 @@ void process_keys(int *position_y, int *position_x, int key)
             if(*position_x < COLS - 1)
                 *position_x = *position_x + 1;
             break;
+        case 127: //127 = backspace
+            /* Remove last char */
+            *position_x = *position_x - 1;
+            break;
         default:
+            *position_x = *position_x + 1;
             addch(key);
     }
 }
@@ -87,13 +90,14 @@ void edit()
     int position_x = 4;
     int position_y= 1;
 
+    move(position_y, position_x);
     while(1)
     {
-        move(position_y, position_x);
         key = getch();
         process_keys(&position_y, &position_x, key);
         const char *key_name = keyname(key);
         process_editor_commands(key_name);
+        move(position_y, position_x);
     }
 }
 
@@ -113,27 +117,11 @@ void read_file(char *filename)
             exit(1);
         }
     }
-
-    /*
-        fseek(file, 0, SEEK_END);
-        file_size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        file_content = malloc(sizeof *file_content * file_size);
-        if(file_content == NULL) { printf("Error allocating memory to a file\n"); exit(1); }
-        fread(file_content, sizeof(char), file_size, file);
-        printw("%s", file_content);
-        free(file_content);
-    */
     int y = 1;
     while(fgets(line, MAX_LINE_LENGTH, file) != NULL && y < LINES)
     {
         mvprintw(y++, 4, "%s", line);
     }
-    /*
-       Need to save lines printed in some sort of global struct (state)
-       Print the rest of the lines as you scroll
-    */
 }
 
 void draw_line_numbers()
@@ -163,7 +151,6 @@ void init_colors()
     }
 }
 
-/* Need a global state */
 int main(int argc, char *argv[])
 {
     char *filename;
@@ -179,7 +166,6 @@ int main(int argc, char *argv[])
         filename = "<<new file>>";
 
 
-    /* editor inits */
     draw_header(filename);
     read_file(filename);
     draw_line_numbers();
