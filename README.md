@@ -1,5 +1,5 @@
 # Terminal based text editor
-tedit can read text and edit text files but it can't save (technically not a text editor yet).
+tedit can read and edit text files but it can't save (technically not a text editor yet).
 ### Working keys so far:
 - Move around with arrow keys
 - <kbd>^X</kbd> or <kbd>:q</kbd> quits the editor
