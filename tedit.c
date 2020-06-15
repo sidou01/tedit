@@ -1,6 +1,7 @@
 #include <curses.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 /* defines */
 #define EDITOR "tedit"
@@ -13,6 +14,7 @@
 
 struct file_t {
     FILE* file;
+    const char *filename;
     char current_line[MAX_LINE_LENGTH];
     int cursor_x;
     int cursor_y;
@@ -20,8 +22,12 @@ struct file_t {
 
 void draw_header(const char *filename)
 {
+    /* time_t mytime = time(NULL); */
+    /* char * time_str = ctime(&mytime); */
+    /* time_str[strlen(time_str)-1] = '\0'; */
+
     attron(COLOR_PAIR(2));
-    int name_len = COLS/2 - (strlen(EDITOR) + strlen(VERSION) + 1);
+    int name_len = COLS/2 - (strlen(EDITOR) + strlen(VERSION) +  1);
     printw("%s %s %*s", EDITOR, VERSION, name_len, filename);
     printw("%*s", COLS/2, "");
     attroff(COLOR_PAIR(1));
@@ -84,47 +90,48 @@ void process_editor_commands(const char *key_name)
     }
 }
 
-void edit()
+void edit(struct file_t *file)
 {
     int key;
-    int position_x = 4;
-    int position_y= 1;
 
-    move(position_y, position_x);
+    move(file->cursor_y, file->cursor_x);
     while(1)
     {
         key = getch();
-        process_keys(&position_y, &position_x, key);
+        process_keys(&file->cursor_y, &file->cursor_x, key);
         const char *key_name = keyname(key);
         process_editor_commands(key_name);
-        move(position_y, position_x);
+        move(file->cursor_y, file->cursor_x);
     }
 }
 
-void read_file(char *filename)
+void read_file(struct file_t *file)
 {
-    FILE *file;
-    char *file_content;
+    /* char *file_content; */
     char line[MAX_LINE_LENGTH];
-    int file_size;
+    /* int file_size; */
 
-    if((file = fopen(filename, "r+")) == NULL)
+    if((file->file = fopen(file->filename, "r+")) == NULL)
     { 
-        if((file = fopen(filename, "w+")) == NULL)
+        if((file->file = fopen(file->filename, "w+")) == NULL)
         {
             endwin();
-            printf("Error opening the file \"%s\"\n", filename);
+            printf("Error opening the file \"%s\"\n", file->filename);
             exit(1);
         }
     }
     int y = 1;
-    while(fgets(line, MAX_LINE_LENGTH, file) != NULL && y < LINES)
+    while(fgets(line, MAX_LINE_LENGTH, file->file) != NULL && y < LINES)
     {
+        /* copy the first line where the cursor is */
+        if(y == 1) strcpy(file->current_line, line);
         mvprintw(y++, 4, "%s", line);
     }
+    file->cursor_x = 4;
+    file->cursor_y = 1;
 }
 
-void draw_line_numbers()
+void draw_line_numbers(void)
 {
     for(int i = 1; i < LINES; i++)
     {
@@ -135,7 +142,7 @@ void draw_line_numbers()
     }
 }
 
-void init_colors()
+void init_colors(void)
 {
     if(has_colors())
     {
@@ -153,7 +160,8 @@ void init_colors()
 
 int main(int argc, char *argv[])
 {
-    char *filename;
+    //should not be here. (don't know yet).
+    struct file_t *file = malloc(sizeof *file);
 
     initscr();
     noecho();
@@ -161,15 +169,15 @@ int main(int argc, char *argv[])
     init_colors();
 
     if(argv[1])
-        filename = argv[1];
+        file->filename = argv[1];
     else
-        filename = "<<new file>>";
+        file->filename = "<<new file>>";
 
 
-    draw_header(filename);
-    read_file(filename);
+    draw_header(file->filename);
+    read_file(file);
     draw_line_numbers();
 
-    edit();
+    edit(file);
     return 0;
 }
