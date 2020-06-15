@@ -3,29 +3,27 @@
 #include <stdlib.h>
 #include <time.h>
 
-/* defines */
 #define EDITOR "tedit"
 #define VERSION "v0.1"
-#define MAX_LINE_LENGTH 1000
+#define MAX_LINE_LENGTH sizeof(char) * 1000
+#define MAX_NUMBER_OF_LINES 10000
 
-/* editor commands */
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
 
 struct file_t {
     FILE* file;
     const char *filename;
-    char current_line[MAX_LINE_LENGTH];
+    char *file_content[MAX_NUMBER_OF_LINES];
+};
+
+struct cursor_t {
     int cursor_x;
     int cursor_y;
 };
 
 void draw_header(const char *filename)
 {
-    /* time_t mytime = time(NULL); */
-    /* char * time_str = ctime(&mytime); */
-    /* time_str[strlen(time_str)-1] = '\0'; */
-
     attron(COLOR_PAIR(2));
     int name_len = COLS/2 - (strlen(EDITOR) + strlen(VERSION) +  1);
     printw("%s %s %*s", EDITOR, VERSION, name_len, filename);
@@ -47,7 +45,7 @@ void process_keys(int *position_y, int *position_x, int key)
                 *position_y = *position_y + 1;
             break;
         case KEY_LEFT:
-            if(*position_x > 0)
+            if(*position_x > 4)
                 *position_x = *position_x - 1;
             break;
         case KEY_RIGHT:
@@ -56,17 +54,28 @@ void process_keys(int *position_y, int *position_x, int key)
             break;
         case 127: //127 = backspace
             /* Remove last char */
-            *position_x = *position_x - 1;
+            if(*position_x > 4)
+                *position_x = *position_x - 1;
             break;
         default:
-            *position_x = *position_x + 1;
             addch(key);
+            //change current line and save the file with snprintf
+            //should get the FILE* file as param.
     }
 }
 
-void process_editor_commands(const char *key_name)
+void free_mem(struct file_t *file, struct cursor_t *cursor)
 {
-    /* vim commands */
+    /* Free allocated memeory */
+    fclose(file->file);
+    for(int i = 0; i < MAX_NUMBER_OF_LINES; i++)
+        free(file->file_content[i]);
+
+    free(cursor);
+}
+void process_editor_commands(const char *key_name, struct file_t *file, struct cursor_t *cursor)
+{
+    /* Exit with :q */
     if(strcmp(key_name,":") == 0)
     {
         const char *next_key = keyname(getch());
@@ -74,43 +83,39 @@ void process_editor_commands(const char *key_name)
         {
             case 'q':
                 endwin();
-                exit(1);
+                free_mem(file, cursor);
+                exit(0);
                 break;
             case 'w':
-                /* Get the FILE* as param or just use the global struct (state) and save changes */
+                /* save the file */
                 break;
 
         }
     }
-    /* or can exit with ^X */
-    if(strcmp(key_name, KEY_EXIT_EDITOR) == 0)
+    if(strcmp(key_name, KEY_EXIT_EDITOR) == 0) //^X
     {
         endwin();
         exit(0);
     }
 }
 
-void edit(struct file_t *file)
+void edit(struct file_t *file, struct cursor_t *cursor)
 {
     int key;
 
-    move(file->cursor_y, file->cursor_x);
+    move(cursor->cursor_y, cursor->cursor_x);
     while(1)
     {
         key = getch();
-        process_keys(&file->cursor_y, &file->cursor_x, key);
+        process_keys(&cursor->cursor_y, &cursor->cursor_x, key);
         const char *key_name = keyname(key);
-        process_editor_commands(key_name);
-        move(file->cursor_y, file->cursor_x);
+        process_editor_commands(key_name, file, cursor);
+        move(cursor->cursor_y, cursor->cursor_x);
     }
 }
 
-void read_file(struct file_t *file)
+void read_file(struct file_t *file, struct cursor_t *cursor)
 {
-    /* char *file_content; */
-    char line[MAX_LINE_LENGTH];
-    /* int file_size; */
-
     if((file->file = fopen(file->filename, "r+")) == NULL)
     { 
         if((file->file = fopen(file->filename, "w+")) == NULL)
@@ -120,15 +125,28 @@ void read_file(struct file_t *file)
             exit(1);
         }
     }
-    int y = 1;
-    while(fgets(line, MAX_LINE_LENGTH, file->file) != NULL && y < LINES)
+    int lines_count = 0;
+    char c;
+    for (c = getc(file->file); c != EOF; c = getc(file->file)) 
+        if (c == '\n') // Increment count if this character is newline 
+            lines_count = lines_count + 1;
+
+    /* go back to the beginning of the file */
+    /* to save the lines and print them to the screen. */
+    rewind(file->file);
+    for(int t = 0; t < lines_count; t++)
     {
-        /* copy the first line where the cursor is */
-        if(y == 1) strcpy(file->current_line, line);
-        mvprintw(y++, 4, "%s", line);
+        file->file_content[t] = malloc(MAX_LINE_LENGTH);
     }
-    file->cursor_x = 4;
-    file->cursor_y = 1;
+    int i = 0;
+    while(fgets(file->file_content[i], MAX_LINE_LENGTH, file->file) != NULL)
+    {
+        file->file_content[i][strlen(file->file_content[i]) - 1] = '\0';
+        mvprintw(i + 1, 4, "%s", file->file_content[i]);
+        i++;
+    }
+    cursor->cursor_x = 4;
+    cursor->cursor_y = 1;
 }
 
 void draw_line_numbers(void)
@@ -160,8 +178,8 @@ void init_colors(void)
 
 int main(int argc, char *argv[])
 {
-    //should not be here. (don't know yet).
     struct file_t *file = malloc(sizeof *file);
+    struct cursor_t *cursor = malloc(sizeof *cursor);
 
     initscr();
     noecho();
@@ -175,9 +193,10 @@ int main(int argc, char *argv[])
 
 
     draw_header(file->filename);
-    read_file(file);
+    read_file(file, cursor);
     draw_line_numbers();
 
-    edit(file);
+    edit(file, cursor);
+
     return 0;
 }
