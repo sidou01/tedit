@@ -31,9 +31,32 @@ void draw_header(const char *filename)
     attroff(COLOR_PAIR(1));
 }
 
-/* interpret arrow/command keys and print the rest */
-void process_keys(int *position_y, int *position_x, int key)
+/* TODO: insert a char at k position on a char array */
+char *insert_char_at(char **string, char ch, int position)
 {
+    int i = 0;
+    if(strlen > 0)
+    {
+        while(i < strlen(*string))
+        {
+            string[i+1] = string[i];
+            i++;
+        }
+        *string[position] = ch;
+        *string[i] = '\0';
+    }
+    else
+    {
+        *string[i] = ch;
+        *string[i+1] = '\0';
+    }
+    return *string;
+}
+
+/* interpret arrow/command keys and print the rest */
+void process_keys(int *position_y, int *position_x, int key, struct file_t *file)
+{
+    char *current_line = file->file_content[*position_y];
     switch(key)
     {
         case KEY_UP:
@@ -58,10 +81,14 @@ void process_keys(int *position_y, int *position_x, int key)
                 *position_x = *position_x - 1;
             break;
         default:
-            addch(key);
-            //change current line and save the file with snprintf
-            //should get the FILE* file as param.
+            file->file_content[*position_y] = insert_char_at(&current_line, key, *position_x);
+            mvaddstr(40, 4, file->file_content[*position_y]);
+            mvaddstr(*position_y, 4, file->file_content[*position_y]);
+            move(*position_y, *position_x);
+            /* *position_x = *position_x + 1; */
+            /* addch(key); */
     }
+    
 }
 
 void free_mem(struct file_t *file, struct cursor_t *cursor)
@@ -87,7 +114,7 @@ void process_editor_commands(const char *key_name, struct file_t *file, struct c
                 exit(0);
                 break;
             case 'w':
-                /* save the file */
+                /* save the file with snprintf */
                 break;
 
         }
@@ -107,7 +134,7 @@ void edit(struct file_t *file, struct cursor_t *cursor)
     while(1)
     {
         key = getch();
-        process_keys(&cursor->cursor_y, &cursor->cursor_x, key);
+        process_keys(&cursor->cursor_y, &cursor->cursor_x, key, file);
         const char *key_name = keyname(key);
         process_editor_commands(key_name, file, cursor);
         move(cursor->cursor_y, cursor->cursor_x);
@@ -125,6 +152,7 @@ void read_file(struct file_t *file, struct cursor_t *cursor)
             exit(1);
         }
     }
+    /* might use lines_count at some point */
     int lines_count = 0;
     char c;
     for (c = getc(file->file); c != EOF; c = getc(file->file)) 
@@ -134,7 +162,7 @@ void read_file(struct file_t *file, struct cursor_t *cursor)
     /* go back to the beginning of the file */
     /* to save the lines and print them to the screen. */
     rewind(file->file);
-    for(int t = 0; t < lines_count; t++)
+    for(int t = 0; t < LINES; t++)
     {
         file->file_content[t] = malloc(MAX_LINE_LENGTH);
     }
@@ -142,9 +170,10 @@ void read_file(struct file_t *file, struct cursor_t *cursor)
     while(fgets(file->file_content[i], MAX_LINE_LENGTH, file->file) != NULL)
     {
         file->file_content[i][strlen(file->file_content[i]) - 1] = '\0';
-        mvprintw(i + 1, 4, "%s", file->file_content[i]);
+        mvaddstr(i+1, 4, file->file_content[i]);
         i++;
     }
+    fclose(file->file);
     cursor->cursor_x = 4;
     cursor->cursor_y = 1;
 }
