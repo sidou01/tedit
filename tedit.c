@@ -32,31 +32,48 @@ void draw_header(const char *filename)
 }
 
 /* TODO: insert a char at k position on a char array */
-char *insert_char_at(char **string, char ch, int position)
+char *insert_char_at(char *string, char ch, int position)
 {
-    int i = 0;
-    if(strlen > 0)
+    int length = strlen(string);
+
+    if(position > length)
     {
-        while(i < strlen(*string))
-        {
-            string[i+1] = string[i];
-            i++;
-        }
-        *string[position] = ch;
-        *string[i] = '\0';
+        int i = length;
+        while(i < position)
+            string[i++] = ' ';
     }
     else
     {
-        *string[i] = ch;
-        *string[i+1] = '\0';
+        string[length + 1] = '\0';
+        while(length > position) {
+            string[length] = string[length - 1];
+            length--;
+        }
     }
-    return *string;
+    string[position] = ch;
+    return string;
+}
+
+/* Need to handle Backspace at the beiginning of the line (join current line with previous one). */
+char *delete_from_string_at(char *string, int position)
+{
+    int length = strlen(string) - 1;
+    if(position > 0)
+    {
+        position = position - 1;
+        while(position < length)
+        {
+            string[position] = string[position+1];
+            position++;
+        }
+        string[length] = ' ';
+    }
+    return string;
 }
 
 /* interpret arrow/command keys and print the rest */
 void process_keys(int *position_y, int *position_x, int key, struct file_t *file)
 {
-    char *current_line = file->file_content[*position_y];
     switch(key)
     {
         case KEY_UP:
@@ -76,17 +93,16 @@ void process_keys(int *position_y, int *position_x, int key, struct file_t *file
                 *position_x = *position_x + 1;
             break;
         case 127: //127 = backspace
-            /* Remove last char */
+            file->file_content[*position_y - 1] = delete_from_string_at(file->file_content[*position_y - 1], *position_x - 4);
+            mvaddstr(*position_y, 4, file->file_content[*position_y - 1]);
             if(*position_x > 4)
                 *position_x = *position_x - 1;
             break;
         default:
-            file->file_content[*position_y] = insert_char_at(&current_line, key, *position_x);
-            mvaddstr(40, 4, file->file_content[*position_y]);
-            mvaddstr(*position_y, 4, file->file_content[*position_y]);
+            file->file_content[*position_y - 1] = insert_char_at(file->file_content[*position_y - 1], key, *position_x - 4);
+            mvaddstr(*position_y, 4, file->file_content[*position_y - 1]);
+            *position_x = *position_x + 1;
             move(*position_y, *position_x);
-            /* *position_x = *position_x + 1; */
-            /* addch(key); */
     }
     
 }
