@@ -10,6 +10,7 @@
 
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
+#define KEY_SAVE_FILE "^A"
 
 struct file_t {
     FILE* file;
@@ -66,7 +67,7 @@ char *delete_from_string_at(char *string, int position)
             string[position] = string[position+1];
             position++;
         }
-        string[length] = ' ';
+        string[length] = ' '; //this produces an error where if it will delete the last letter
     }
     return string;
 }
@@ -110,7 +111,6 @@ void process_keys(int *position_y, int *position_x, int key, struct file_t *file
 void free_mem(struct file_t *file, struct cursor_t *cursor)
 {
     /* Free allocated memeory */
-    fclose(file->file);
     for(int i = 0; i < MAX_NUMBER_OF_LINES; i++)
         free(file->file_content[i]);
 
@@ -118,30 +118,57 @@ void free_mem(struct file_t *file, struct cursor_t *cursor)
 }
 void process_editor_commands(const char *key_name, struct file_t *file, struct cursor_t *cursor)
 {
-    /* Exit with :q */
-    if(strcmp(key_name,":") == 0)
-    {
-        const char *next_key = keyname(getch());
-        switch(*next_key)
-        {
-            case 'q':
-                endwin();
-                free_mem(file, cursor);
-                exit(0);
-                break;
-            case 'w':
-                /* save the file with snprintf */
-                break;
-
-        }
-    }
     if(strcmp(key_name, KEY_EXIT_EDITOR) == 0) //^X
     {
         endwin();
+        free_mem(file, cursor);
         exit(0);
+    }
+    else if(strcmp(key_name, KEY_SAVE_FILE) == 0) //^A
+    {
+        if(strlen(file->filename) > 0)
+        {
+            if((file->file = fopen(file->filename, "w")) == NULL)
+            {
+                endwin();
+                printf("Cannot save the file %s.", file->filename);
+                exit(1);
+            }
+            for(int i = 0; i < LINES; i++)
+            {
+                fputs(file->file_content[i], file->file);
+                fputs("\n", file->file);
+            }
+            fclose(file->file);
+        }
+        /* else */
+        /* { */
+        /*     if((file->file = fopen("new_tedit_file.txt", "w")) == NULL) */
+        /*     { */
+        /*         endwin(); */
+        /*         printf("Cannot save the file %s.", file->filename); */
+        /*         exit(1); */
+        /*     } */
+        /*     for(int i = 0; i < LINES; i++) */
+        /*     { */
+        /*         fputs(file->file_content[i], file->file); */
+        /*         fputs("\n", file->file); */
+        /*     } */
+        /*     fclose(file->file); */
+
+        /* } */
     }
 }
 
+//editor commands: maybe store them in an array and auto check
+bool is_editor_command(const char *key)
+{
+    if(strcmp(key, KEY_EXIT_EDITOR) == 0) //^X
+        return true;
+    else if(strcmp(key, KEY_SAVE_FILE) == 0) //^A
+        return true;
+    return false;
+}
 void edit(struct file_t *file, struct cursor_t *cursor)
 {
     int key;
@@ -150,9 +177,11 @@ void edit(struct file_t *file, struct cursor_t *cursor)
     while(1)
     {
         key = getch();
-        process_keys(&cursor->cursor_y, &cursor->cursor_x, key, file);
         const char *key_name = keyname(key);
-        process_editor_commands(key_name, file, cursor);
+        if(is_editor_command(key_name) == true)
+            process_editor_commands(key_name, file, cursor);
+        else
+            process_keys(&cursor->cursor_y, &cursor->cursor_x, key, file);
         move(cursor->cursor_y, cursor->cursor_x);
     }
 }
@@ -234,7 +263,7 @@ int main(int argc, char *argv[])
     if(argv[1])
         file->filename = argv[1];
     else
-        file->filename = "<<new file>>";
+        file->filename = "new_tedit_file";
 
 
     draw_header(file->filename);
