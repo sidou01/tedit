@@ -10,7 +10,7 @@
 
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
-#define KEY_SAVE_FILE "^A"
+#define KEY_SAVE_FILE "^S"
 
 struct file_t {
     FILE* file;
@@ -257,6 +257,7 @@ int main(int argc, char *argv[])
 
     initscr();
     noecho();
+    raw();
     keypad(stdscr, TRUE);
     init_colors();
 
