@@ -8,6 +8,7 @@ Right now it doesn't have any key-bindings, I'll try to add some to make editing
 - Move around with arrow keys
 - <kbd>^X</kbd> or <kbd>:q</kbd> quits the editor
 - <kbd>^S</kbd> saves the file
+- <kbd>^A</kbd> Moves the cursor to the beginning of the line
 
 ### Screenshot of how it looks
 

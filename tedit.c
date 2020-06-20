@@ -11,11 +11,13 @@
 #define KEY_ESCAPE 27
 #define KEY_EXIT_EDITOR "^X"
 #define KEY_SAVE_FILE "^S"
+#define KEY_BEGINNING_OF_LINE "^A"
 
 struct file_t {
     FILE* file;
     const char *filename;
     char *file_content[MAX_NUMBER_OF_LINES];
+    int lines;
 };
 
 struct cursor_t {
@@ -32,7 +34,6 @@ void draw_header(const char *filename)
     attroff(COLOR_PAIR(1));
 }
 
-/* TODO: insert a char at k position on a char array */
 char *insert_char_at(char *string, char ch, int position)
 {
     int length = strlen(string);
@@ -72,6 +73,18 @@ char *delete_from_string_at(char *string, int position)
     return string;
 }
 
+int process_enter_key(struct file_t *file, int position_y)
+{
+    int i = file->lines++;
+    while(i > position_y)
+    {
+        file->file_content[i+1] = file->file_content[i];
+        i++;
+    }
+    position_y = position_y + 1;
+    return position_y;
+}
+
 /* interpret arrow/command keys and print the rest */
 void process_keys(int *position_y, int *position_x, int key, struct file_t *file)
 {
@@ -92,6 +105,13 @@ void process_keys(int *position_y, int *position_x, int key, struct file_t *file
         case KEY_RIGHT:
             if(*position_x < COLS - 1)
                 *position_x = *position_x + 1;
+            break;
+        case 10:
+            //ENTER logic
+            *position_y = process_enter_key(file, *position_y);
+            for(int i = 0; i < 40; i++)
+                mvprintw(i+1, 4, file->file_content[i]);
+            printf("x: %d,y: %d", *position_x, *position_y);
             break;
         case 127: //127 = backspace
             file->file_content[*position_y - 1] = delete_from_string_at(file->file_content[*position_y - 1], *position_x - 4);
@@ -141,23 +161,9 @@ void process_editor_commands(const char *key_name, struct file_t *file, struct c
             }
             fclose(file->file);
         }
-        /* else */
-        /* { */
-        /*     if((file->file = fopen("new_tedit_file.txt", "w")) == NULL) */
-        /*     { */
-        /*         endwin(); */
-        /*         printf("Cannot save the file %s.", file->filename); */
-        /*         exit(1); */
-        /*     } */
-        /*     for(int i = 0; i < LINES; i++) */
-        /*     { */
-        /*         fputs(file->file_content[i], file->file); */
-        /*         fputs("\n", file->file); */
-        /*     } */
-        /*     fclose(file->file); */
-
-        /* } */
     }
+    else if(strcmp(key_name, KEY_BEGINNING_OF_LINE) == 0)
+        cursor->cursor_x = 4;
 }
 
 //editor commands: maybe store them in an array and auto check
@@ -166,6 +172,8 @@ bool is_editor_command(const char *key)
     if(strcmp(key, KEY_EXIT_EDITOR) == 0) //^X
         return true;
     else if(strcmp(key, KEY_SAVE_FILE) == 0) //^A
+        return true;
+    else if(strcmp(key, KEY_BEGINNING_OF_LINE) == 1) //^A
         return true;
     return false;
 }
@@ -204,10 +212,11 @@ void read_file(struct file_t *file, struct cursor_t *cursor)
         if (c == '\n') // Increment count if this character is newline 
             lines_count = lines_count + 1;
 
+    file->lines = lines_count;
     /* go back to the beginning of the file */
     /* to save the lines and print them to the screen. */
     rewind(file->file);
-    for(int t = 0; t < LINES; t++)
+    for(int t = 0; t < MAX_NUMBER_OF_LINES; t++)
     {
         file->file_content[t] = malloc(MAX_LINE_LENGTH);
     }
