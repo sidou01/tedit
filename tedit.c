@@ -1,7 +1,9 @@
 #include <curses.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 
 #define EDITOR "tedit"
 #define VERSION "v0.1"
@@ -32,6 +34,23 @@ void draw_header(const char *filename)
     printw("%s %s %*s", EDITOR, VERSION, name_len, filename);
     printw("%*s", COLS/2, "");
     attroff(COLOR_PAIR(1));
+}
+
+void draw_line_numbers(void)
+{
+    for(int i = 1; i < LINES; i++)
+    {
+        move(i,0);
+        attron(COLOR_PAIR(1));
+        printw("%d", i);
+        attroff(COLOR_PAIR(1));
+    }
+}
+
+void print_file_content(struct file_t *file)
+{
+    for(int i = 0; i < LINES; i++)
+        mvprintw(i+1, 4, "%s", file->file_content[i]);
 }
 
 char *insert_char_at(char *string, char ch, int position)
@@ -93,10 +112,25 @@ void process_keys(int *position_y, int *position_x, int key, struct file_t *file
         case KEY_UP:
             if(*position_y > 1)
                 *position_y = *position_y - 1;
+            if(*position_y == LINES - 1)
+            {
+                scrl(-1);
+                draw_line_numbers();
+                print_file_content(file);
+            }
+            mvprintw(40, 4, "%d %d", *position_y, LINES);
             break;
         case KEY_DOWN:
             if(*position_y < LINES - 1)
                 *position_y = *position_y + 1;
+            if(*position_y == LINES - 1)
+            {
+                scrl(1);
+                draw_line_numbers();
+                print_file_content(file);
+            }
+
+            mvprintw(40, 4, "%d %d", *position_y, LINES);
             break;
         case KEY_LEFT:
             if(*position_x > 4)
@@ -173,7 +207,7 @@ bool is_editor_command(const char *key)
         return true;
     else if(strcmp(key, KEY_SAVE_FILE) == 0) //^A
         return true;
-    else if(strcmp(key, KEY_BEGINNING_OF_LINE) == 1) //^A
+    else if(strcmp(key, KEY_BEGINNING_OF_LINE) == 0) //^A
         return true;
     return false;
 }
@@ -232,16 +266,6 @@ void read_file(struct file_t *file, struct cursor_t *cursor)
     cursor->cursor_y = 1;
 }
 
-void draw_line_numbers(void)
-{
-    for(int i = 1; i < LINES; i++)
-    {
-        move(i,0);
-        attron(COLOR_PAIR(1));
-        printw("%d", i);
-        attroff(COLOR_PAIR(1));
-    }
-}
 
 void init_colors(void)
 {
@@ -267,6 +291,7 @@ int main(int argc, char *argv[])
     initscr();
     noecho();
     raw();
+    scrollok(stdscr, TRUE);
     keypad(stdscr, TRUE);
     init_colors();
 
